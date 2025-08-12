@@ -92,80 +92,87 @@ class LanguageSelectionScreen extends StatelessWidget {
             return Padding(
               padding: padding,
               child: isLandscape
-                  ? Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Left: title + pickers
-                        Expanded(
-                          flex: 3,
-                          child: Consumer<TranslationProvider>(
-                            builder: (context, provider, _) => Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                title(compact: true),
-                                const SizedBox(height: 16),
-                                languagePicker(
-                                  label: 'Speak in:',
-                                  current: provider.inputLanguage,
-                                  onChanged: provider.setInputLanguage,
+                        // Centered header across the full width
+                        Center(child: title(compact: true)),
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Left column: pickers
+                            Expanded(
+                              flex: 1,
+                              child: Consumer<TranslationProvider>(
+                                builder: (context, provider, _) => Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    languagePicker(
+                                      label: 'Speak in:',
+                                      current: provider.inputLanguage,
+                                      onChanged: provider.setInputLanguage,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    languagePicker(
+                                      label: 'Translate to:',
+                                      current: provider.outputLanguage,
+                                      onChanged: provider.setOutputLanguage,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 16),
-                                languagePicker(
-                                  label: 'Translate to:',
-                                  current: provider.outputLanguage,
-                                  onChanged: provider.setOutputLanguage,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 24),
-                        // Right: start + tip
-                        Expanded(
-                          flex: 2,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              SizedBox(
-                                height: 52,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const TranslationDisplayScreen(),
+                            const SizedBox(width: 24),
+                            // Right column: start + tip
+                            Expanded(
+                              flex: 1,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    height: 52,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const TranslationDisplayScreen(),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
                                       ),
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                      child: const Text('Start Translation',
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                                     ),
                                   ),
-                                  child: const Text('Start Translation',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                                ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.blue.shade200),
+                                    ),
+                                    child: const Text(
+                                      'Tip: Use a quiet environment and allow mic permissions.',
+                                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.blue.shade200),
-                                ),
-                                child: const Text(
-                                  'Tip: Use a quiet environment and allow mic permissions.',
-                                  style: TextStyle(fontSize: 12, color: Colors.black87),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     )
