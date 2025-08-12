@@ -250,57 +250,7 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
   }
 
   Widget _buildBottomControls(BuildContext context, TranslationProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Yellow interrupt button (main control)
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.amber.withOpacity(0.3),
-                  blurRadius: 8,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: () => provider.interruptPhrase(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.black,
-                shape: const CircleBorder(),
-                padding: const EdgeInsets.all(24),
-                elevation: 6,
-              ),
-              child: const Icon(
-                Icons.pause,
-                size: 40,
-              ),
-            ),
-          ),
-          
-          // Clear button (smaller, secondary)
-          ElevatedButton(
-            onPressed: () => provider.clearTexts(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade700,
-              foregroundColor: Colors.white,
-              shape: const CircleBorder(),
-              padding: const EdgeInsets.all(16),
-              elevation: 4,
-            ),
-            child: const Icon(
-              Icons.clear,
-              size: 24,
-            ),
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildErrorOverlay(TranslationProvider provider) {
