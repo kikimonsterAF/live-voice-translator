@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:live_voice_translator/models/language.dart';
 import 'package:live_voice_translator/services/speech_service.dart';
 import 'package:live_voice_translator/services/translation_service.dart';
@@ -12,6 +13,8 @@ class TranslationProvider extends ChangeNotifier {
   bool _isListening = false;
   bool _isTranslating = false;
   String _errorMessage = '';
+  Timer? _debounceTimer;
+  DateTime _lastTranslationAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   final SpeechService _speechService = SpeechService();
   final TranslationService _translationService = TranslationService();
@@ -81,7 +84,25 @@ class TranslationProvider extends ChangeNotifier {
         language: _inputLanguage,
         onResult: (text) async {
           setOriginalText(text);
-          await translateText(text);
+          // Debounce translations to feel more streaming and reduce API chatter
+          _debounceTimer?.cancel();
+          if (text.trim().length < 3) return;
+
+          const debounceMs = 600;
+          const minIntervalMs = 900;
+
+          final now = DateTime.now();
+          final elapsed = now.difference(_lastTranslationAt).inMilliseconds;
+
+          if (elapsed >= minIntervalMs) {
+            _lastTranslationAt = now;
+            unawaited(translateText(text));
+          } else {
+            _debounceTimer = Timer(const Duration(milliseconds: debounceMs), () {
+              _lastTranslationAt = DateTime.now();
+              unawaited(translateText(_originalText));
+            });
+          }
         },
         onError: (error) {
           setError(error);
@@ -132,6 +153,7 @@ class TranslationProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _speechService.dispose();
     super.dispose();
   }

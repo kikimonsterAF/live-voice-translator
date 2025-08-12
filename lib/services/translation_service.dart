@@ -1,10 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+// DO NOT COMMIT KEYS. This file reads from a local-only secrets file if present.
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
 class TranslationService {
-  // For demo purposes, we'll use a simple translation service
-  // In production, you would use Google Translate API, Azure Translator, or similar
-  static const String _baseUrl = 'https://api.mymemory.translated.net/get';
+  // Primary: Google Translate v2 REST API
+  static const String _googleUrl = 'https://translation.googleapis.com/language/translate/v2';
+  String? _apiKey; // loaded from local secrets
   
   Future<String> translate({
     required String text,
@@ -18,36 +22,42 @@ class TranslationService {
         return '';
       }
 
-      // For demo purposes, if translating to the same language, return original
+      // If translating to the same language, return original
       if (from == to) {
         return cleanText;
       }
 
-      // Build the request URL
-      final url = Uri.parse(_baseUrl).replace(queryParameters: {
-        'q': cleanText,
-        'langpair': '$from|$to',
-      });
+      // Ensure API key
+      final key = await _loadApiKey();
+      if (key == null || key.isEmpty) {
+        throw Exception('Missing Google Translate API key');
+      }
 
-      // Make the HTTP request
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-      );
+      // Google Translate v2 request (simple and low-latency for short segments)
+      final url = Uri.parse('$_googleUrl?key=$key');
+      final body = {
+        'q': cleanText,
+        'source': from,
+        'target': to,
+        'format': 'text',
+      };
+      final response = await http
+          .post(url, headers: {'Content-Type': 'application/json'}, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        
-        if (data['responseStatus'] == 200) {
-          final translatedText = data['responseData']['translatedText'] as String;
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final translations = (data['data']?['translations'] as List?) ?? [];
+        if (translations.isNotEmpty) {
+          final translatedText = translations.first['translatedText'] as String? ?? '';
           return translatedText;
-        } else {
-          throw Exception('Translation API error: ${data['responseDetails']}');
         }
+        throw Exception('Unexpected response');
       } else {
-        throw Exception('HTTP error: ${response.statusCode}');
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
-      // For demo purposes, return a fallback translation
+      // Fallback if API fails
       return _getFallbackTranslation(text, from, to);
     }
   }
@@ -103,13 +113,31 @@ class TranslationService {
   // Method to check if translation service is available
   Future<bool> isServiceAvailable() async {
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl?q=test&langpair=en|vi'),
-      ).timeout(const Duration(seconds: 5));
-      
+      final key = await _loadApiKey();
+      if (key == null || key.isEmpty) return false;
+      final url = Uri.parse('$_googleUrl?key=$key&q=test&source=en&target=vi');
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (e) {
       return false;
     }
+  }
+
+  // Load API key from a local-only asset if present, otherwise from env-like runtime
+  Future<String?> _loadApiKey() async {
+    if (_apiKey != null) return _apiKey;
+    // Prefer an asset file that is not committed: assets/secrets/google_translate_key.txt
+    try {
+      final key = await rootBundle.loadString('assets/secrets/google_translate_key.txt');
+      _apiKey = key.trim();
+      return _apiKey;
+    } catch (_) {}
+    // As a fallback, use a const via --dart-define at build time
+    const envKey = String.fromEnvironment('GOOGLE_TRANSLATE_API_KEY');
+    if (envKey.isNotEmpty) {
+      _apiKey = envKey;
+      return _apiKey;
+    }
+    return null;
   }
 }
