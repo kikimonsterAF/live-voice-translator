@@ -12,9 +12,10 @@ class LanguageSelectionScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isLandscape = constraints.maxWidth > constraints.maxHeight;
+            final content = Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // App Title
@@ -199,7 +200,14 @@ class LanguageSelectionScreen extends StatelessWidget {
                 ),
               ),
             ],
-          ),
+            );
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: isLandscape
+                  ? SingleChildScrollView(child: content)
+                  : content,
+            );
+          },
         ),
       ),
     );
