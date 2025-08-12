@@ -15,197 +15,220 @@ class LanguageSelectionScreen extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isLandscape = constraints.maxWidth > constraints.maxHeight;
-            final content = Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App Title
-              const Text(
-                'Live Voice Translator',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Real-time voice translation',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 60),
 
-              // Input Language Selection
-              Consumer<TranslationProvider>(
-                builder: (context, provider, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Speak in:',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+            Widget title({required bool compact}) => Column(
+                  children: [
+                    Text(
+                      'Live Voice Translator',
+                      style: TextStyle(
+                        fontSize: compact ? 26 : 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey.shade50,
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Language>(
-                            value: provider.inputLanguage,
-                            isExpanded: true,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black87,
-                            ),
-                            items: SupportedLanguages.languages.map((language) {
-                              return DropdownMenuItem<Language>(
-                                value: language,
-                                child: Text(
-                                  '${language.nativeName} (${language.name})',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (Language? newLanguage) {
-                              if (newLanguage != null) {
-                                provider.setInputLanguage(newLanguage);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 32),
-
-              // Output Language Selection
-              Consumer<TranslationProvider>(
-                builder: (context, provider, child) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Translate to:',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey.shade50,
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Language>(
-                            value: provider.outputLanguage,
-                            isExpanded: true,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black87,
-                            ),
-                            items: SupportedLanguages.languages.map((language) {
-                              return DropdownMenuItem<Language>(
-                                value: language,
-                                child: Text(
-                                  '${language.nativeName} (${language.name})',
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (Language? newLanguage) {
-                              if (newLanguage != null) {
-                                provider.setOutputLanguage(newLanguage);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 60),
-
-              // Start Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const TranslationDisplayScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      textAlign: TextAlign.center,
                     ),
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Start Translation',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 6),
+                    Text(
+                      'Real-time voice translation',
+                      style: TextStyle(
+                        fontSize: compact ? 14 : 16,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                ),
-              ),
+                  ],
+                );
 
-              const SizedBox(height: 24),
+            Widget languagePicker({
+              required String label,
+              required Language current,
+              required ValueChanged<Language> onChanged,
+            }) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<Language>(
+                          value: current,
+                          isExpanded: true,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black87,
+                          ),
+                          items: SupportedLanguages.languages.map((language) {
+                            return DropdownMenuItem<Language>(
+                              value: language,
+                              child: Text('${language.nativeName} (${language.name})',
+                                  softWrap: true),
+                            );
+                          }).toList(),
+                          onChanged: (Language? newLanguage) {
+                            if (newLanguage != null) onChanged(newLanguage);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                );
 
-              // Instructions
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: const Text(
-                  'Tip: This app works best in quiet environments. Make sure to grant microphone permissions when prompted.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-            );
+            final padding = EdgeInsets.all(isLandscape ? 16 : 24);
+
             return Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: padding,
               child: isLandscape
-                  ? SingleChildScrollView(child: content)
-                  : content,
+                  ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Left: title + pickers
+                        Expanded(
+                          flex: 3,
+                          child: Consumer<TranslationProvider>(
+                            builder: (context, provider, _) => Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                title(compact: true),
+                                const SizedBox(height: 16),
+                                languagePicker(
+                                  label: 'Speak in:',
+                                  current: provider.inputLanguage,
+                                  onChanged: provider.setInputLanguage,
+                                ),
+                                const SizedBox(height: 16),
+                                languagePicker(
+                                  label: 'Translate to:',
+                                  current: provider.outputLanguage,
+                                  onChanged: provider.setOutputLanguage,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        // Right: start + tip
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const TranslationDisplayScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text('Start Translation',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.blue.shade200),
+                                ),
+                                child: const Text(
+                                  'Tip: Use a quiet environment and allow mic permissions.',
+                                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Consumer<TranslationProvider>(
+                      builder: (context, provider, _) => Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          title(compact: false),
+                          const SizedBox(height: 40),
+                          languagePicker(
+                            label: 'Speak in:',
+                            current: provider.inputLanguage,
+                            onChanged: provider.setInputLanguage,
+                          ),
+                          const SizedBox(height: 24),
+                          languagePicker(
+                            label: 'Translate to:',
+                            current: provider.outputLanguage,
+                            onChanged: provider.setOutputLanguage,
+                          ),
+                          const SizedBox(height: 40),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const TranslationDisplayScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Start Translation',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: const Text(
+                              'Tip: This app works best in quiet environments. Make sure to grant microphone permissions when prompted.',
+                              style: TextStyle(fontSize: 14, color: Colors.black87),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
             );
           },
         ),
