@@ -2,6 +2,34 @@ class Language {
   final String code;
   final String name;
   final String nativeName;
+  String get localeCode {
+    switch (code) {
+      case 'en':
+        return 'en-US';
+      case 'zh':
+        return 'zh-CN';
+      case 'hi':
+        return 'hi-IN';
+      case 'es':
+        return 'es-ES';
+      case 'ar':
+        return 'ar-SA';
+      case 'bn':
+        return 'bn-BD';
+      case 'fr':
+        return 'fr-FR';
+      case 'ru':
+        return 'ru-RU';
+      case 'pt':
+        return 'pt-BR';
+      case 'ur':
+        return 'ur-PK';
+      case 'vi':
+        return 'vi-VN';
+      default:
+        return 'en-US';
+    }
+  }
 
   const Language({
     required this.code,

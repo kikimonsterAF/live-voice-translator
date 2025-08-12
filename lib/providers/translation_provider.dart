@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:live_voice_translator/models/language.dart';
 import 'package:live_voice_translator/services/speech_service.dart';
 import 'package:live_voice_translator/services/translation_service.dart';
+import 'package:live_voice_translator/services/gcp_stt_service.dart';
 
 class TranslationProvider extends ChangeNotifier {
   Language _inputLanguage = SupportedLanguages.defaultInputLanguage;
@@ -18,6 +19,7 @@ class TranslationProvider extends ChangeNotifier {
 
   final SpeechService _speechService = SpeechService();
   final TranslationService _translationService = TranslationService();
+  final GcpSttService _gcpStt = GcpSttService();
 
   // Getters
   Language get inputLanguage => _inputLanguage;
@@ -80,6 +82,42 @@ class TranslationProvider extends ChangeNotifier {
       clearError();
       setListening(true);
       
+      // Try Google Cloud STT first; if it starts, it will stream transcripts continuously
+      bool gcpStarted = false;
+      try {
+        await _gcpStt.start(
+          locale: _inputLanguage.localeCode,
+          onTranscript: (text, isFinal) async {
+            setOriginalText(text);
+            // Use same debounce logic for streaming translation
+            _debounceTimer?.cancel();
+            if (text.trim().length < 3) return;
+
+            const debounceMs = 500;
+            const minIntervalMs = 800;
+
+            final now = DateTime.now();
+            final elapsed = now.difference(_lastTranslationAt).inMilliseconds;
+
+            if (elapsed >= minIntervalMs) {
+              _lastTranslationAt = now;
+              unawaited(translateText(text));
+            } else {
+              _debounceTimer = Timer(const Duration(milliseconds: debounceMs), () {
+                _lastTranslationAt = DateTime.now();
+                unawaited(translateText(_originalText));
+              });
+            }
+          },
+          onError: (e) {
+            setError(e);
+          },
+        );
+        gcpStarted = true;
+      } catch (_) {}
+
+      if (gcpStarted) return;
+
       await _speechService.startListening(
         language: _inputLanguage,
         onResult: (text) async {
@@ -117,6 +155,7 @@ class TranslationProvider extends ChangeNotifier {
 
   Future<void> stopListening() async {
     try {
+      await _gcpStt.stop();
       await _speechService.stopListening();
       setListening(false);
     } catch (e) {

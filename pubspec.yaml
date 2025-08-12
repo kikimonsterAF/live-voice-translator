@@ -44,6 +44,7 @@ dependencies:
   
   # Screen orientation and utilities
   auto_size_text: ^3.0.0
+  google_speech: ^5.1.0
 
 dev_dependencies:
   flutter_test:

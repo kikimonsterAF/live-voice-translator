@@ -12,6 +12,10 @@ import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.EventChannel
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.media.AudioFormat
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -19,6 +23,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private lateinit var channel: MethodChannel
+    private lateinit var audioEventChannel: EventChannel
     private val REQ_CODE_SPEECH = 1001
     private val REQ_CODE_PERMISSION = 2001
 
@@ -28,6 +33,11 @@ class MainActivity : FlutterActivity() {
     private var recognitionIntent: Intent? = null
     private var isListening: Boolean = false
 
+    // Raw PCM streaming to Flutter
+    private var audioRecord: AudioRecord? = null
+    private var isRecordingPcm: Boolean = false
+    private var audioSink: EventChannel.EventSink? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -36,7 +46,18 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        val messenger = flutterEngine.dartExecutor.binaryMessenger
+        channel = MethodChannel(messenger, CHANNEL)
+        audioEventChannel = EventChannel(messenger, "flutter.native/audioStream")
+        audioEventChannel.setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                audioSink = events
+            }
+
+            override fun onCancel(arguments: Any?) {
+                audioSink = null
+            }
+        })
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestPermission" -> {
@@ -70,6 +91,14 @@ class MainActivity : FlutterActivity() {
                 }
                 "stopListening" -> {
                     stopContinuousRecognizer()
+                    result.success(true)
+                }
+                "startPcm" -> {
+                    startPcmCapture()
+                    result.success(true)
+                }
+                "stopPcm" -> {
+                    stopPcmCapture()
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -148,6 +177,51 @@ class MainActivity : FlutterActivity() {
         isListening = false
         recognizer?.stopListening()
         recognizer?.cancel()
+    }
+
+    private fun startPcmCapture() {
+        if (isRecordingPcm) return
+        val sampleRate = 16000
+        val channelConfig = AudioFormat.CHANNEL_IN_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+        val minBuffer = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        if (minBuffer == AudioRecord.ERROR || minBuffer == AudioRecord.ERROR_BAD_VALUE) {
+            audioSink?.error("AUDIO_INIT", "Invalid buffer size", null)
+            return
+        }
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            channelConfig,
+            audioFormat,
+            minBuffer * 2
+        )
+        if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+            audioSink?.error("AUDIO_INIT", "AudioRecord not initialized", null)
+            return
+        }
+        isRecordingPcm = true
+        audioRecord?.startRecording()
+        Thread {
+            val buffer = ByteArray(minBuffer)
+            while (isRecordingPcm && audioRecord != null) {
+                val read = audioRecord!!.read(buffer, 0, buffer.size)
+                if (read > 0) {
+                    val out = ByteArray(read)
+                    System.arraycopy(buffer, 0, out, 0, read)
+                    runOnUiThread { audioSink?.success(out) }
+                }
+            }
+        }.start()
+    }
+
+    private fun stopPcmCapture() {
+        isRecordingPcm = false
+        try {
+            audioRecord?.stop()
+            audioRecord?.release()
+        } catch (_: Exception) {}
+        audioRecord = null
     }
 
     @Deprecated("Deprecated in Java")
