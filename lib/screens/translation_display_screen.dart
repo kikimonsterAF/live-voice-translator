@@ -205,17 +205,27 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
   }
 
   Widget _buildTranslatedText(String text) {
+    // Get screen orientation and size for better scaling
+    final orientation = MediaQuery.of(context).orientation;
+    final screenSize = MediaQuery.of(context).size;
+    
+    // Larger font sizes, especially for landscape mode
+    final minFontSize = orientation == Orientation.landscape ? 36.0 : 28.0;
+    final maxFontSize = orientation == Orientation.landscape ? 120.0 : 96.0;
+    final maxLines = orientation == Orientation.landscape ? 2 : 3;
+    
     return AutoSizeText(
       text,
       style: const TextStyle(
         color: Colors.white,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.2,
       ),
       textAlign: TextAlign.center,
-      maxLines: 3,
-      minFontSize: 24,
-      maxFontSize: 72,
-      stepGranularity: 2,
+      maxLines: maxLines,
+      minFontSize: minFontSize,
+      maxFontSize: maxFontSize,
+      stepGranularity: 4,
     );
   }
 
