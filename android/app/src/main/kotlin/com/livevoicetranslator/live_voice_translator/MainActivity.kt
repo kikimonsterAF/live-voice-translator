@@ -16,6 +16,7 @@ import io.flutter.plugin.common.EventChannel
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.media.AudioFormat
+import android.view.WindowManager
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -40,6 +41,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Remove global keep-screen-on; handled per translation screen via Flutter UI
 
         // no-op here; we handle results via deprecated callbacks for compatibility
     }
