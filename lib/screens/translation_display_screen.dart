@@ -175,11 +175,11 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
   Widget _buildWaitingMessage(TranslationProvider provider) {
     String message;
     if (provider.isListening) {
-      message = 'Listening for speech...\n(Demo mode with sample phrases)\n\nUse yellow button to interrupt phrases';
+      message = 'Listening...\nUse the yellow button to separate phrases or the keyboard icon to type.';
     } else if (provider.isTranslating) {
       message = 'Translating...';
     } else {
-      message = 'Starting translation...\nUse keyboard icon to type text';
+      message = 'Preparing microphone...\nUse the keyboard icon to type if needed.';
     }
     
     return Column(

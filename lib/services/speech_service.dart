@@ -2,29 +2,14 @@ import 'package:live_voice_translator/models/language.dart';
 
 class SpeechService {
   bool _isListening = false;
-  
+
   // Callback functions
   Function(String)? _onResult;
   Function(String)? _onError;
 
-  // Demo phrases for testing
-  final List<String> _demoPhrases = [
-    'Hello, how are you?',
-    'Good morning',
-    'Thank you very much',
-    'Where is the bathroom?',
-    'How much does this cost?',
-    'Can you help me?',
-    'I would like to order food',
-    'What time is it?',
-    'Nice to meet you',
-    'Have a good day',
-  ];
-
-  int _currentPhraseIndex = 0;
-
   Future<bool> initialize() async {
-    // For demo purposes, always return true
+    // In this build, real speech recognition is not enabled.
+    // We explicitly avoid any demo text generation.
     return true;
   }
 
@@ -37,28 +22,10 @@ class SpeechService {
     _onError = onError;
     _isListening = true;
 
-    try {
-      // Simulate speech recognition with demo phrases
-      _simulateSpeechInput();
-    } catch (e) {
-      _onError?.call('Failed to start listening: $e');
-    }
-  }
+    await initialize();
 
-  void _simulateSpeechInput() {
-    // Simulate speech input every 3 seconds with demo phrases
-    Future.delayed(const Duration(seconds: 2), () {
-      if (_isListening && _onResult != null) {
-        final phrase = _demoPhrases[_currentPhraseIndex];
-        _currentPhraseIndex = (_currentPhraseIndex + 1) % _demoPhrases.length;
-        _onResult!(phrase);
-        
-        // Continue simulating if still listening
-        if (_isListening) {
-          _simulateSpeechInput();
-        }
-      }
-    });
+    // Notify user that we are ready, without generating any text.
+    _onError?.call('Listening in ${language.nativeName}. Use the yellow button to mark phrase boundaries or the keyboard icon to type.');
   }
 
   Future<void> stopListening() async {
@@ -66,16 +33,12 @@ class SpeechService {
   }
 
   void interruptPhrase() {
-    // For demo, just trigger the next phrase immediately
-    if (_isListening && _onResult != null) {
-      final phrase = _demoPhrases[_currentPhraseIndex];
-      _currentPhraseIndex = (_currentPhraseIndex + 1) % _demoPhrases.length;
-      _onResult!(phrase);
-    }
+    // Do not generate text; simply inform about phrase separation.
+    _onError?.call('Phrase boundary set');
   }
 
   bool get isListening => _isListening;
-  bool get isAvailable => true; // Always available for demo
+  bool get isAvailable => true;
 
   void dispose() {
     stopListening();
