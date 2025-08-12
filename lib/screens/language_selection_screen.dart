@@ -100,7 +100,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                         Center(child: title(compact: true)),
                         const SizedBox(height: 16),
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             // Left column: pickers
                             Expanded(
