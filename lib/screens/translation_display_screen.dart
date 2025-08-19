@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:live_voice_translator/providers/translation_provider.dart';
@@ -11,16 +12,19 @@ class TranslationDisplayScreen extends StatefulWidget {
 }
 
 class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
-  final TextEditingController _textController = TextEditingController();
-  bool _showTextInput = false;
-
+  TranslationProvider? _provider;
   @override
   void initState() {
     super.initState();
-    // Start listening automatically when screen loads
+    // Clear previous session data and start fresh
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TranslationProvider>().startListening();
+      _provider = context.read<TranslationProvider>();
+      _provider?.clearTexts(); // Clear any previous translation texts
+      _provider?.clearError(); // Clear any previous errors
+      _provider?.startListening();
     });
+    // Presenter mode: keep screen awake and immersive while on this screen
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
@@ -43,10 +47,7 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
                       child: _buildTranslationArea(provider),
                     ),
                     
-                    // Text input area (shown when toggled)
-                    if (_showTextInput) _buildTextInputArea(provider),
-                    
-                    // Bottom controls
+                    // Bottom controls (empty for now)
                     _buildBottomControls(context, provider),
                   ],
                 ),
@@ -88,14 +89,9 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
             ),
           ),
           IconButton(
-            icon: Icon(
-              _showTextInput ? Icons.keyboard_hide : Icons.keyboard,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.keyboard, color: Colors.white),
             onPressed: () {
-              setState(() {
-                _showTextInput = !_showTextInput;
-              });
+              // Optional: Add text input functionality later
             },
           ),
         ],
@@ -127,59 +123,14 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
     );
   }
 
-  Widget _buildTextInputArea(TranslationProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade800,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _textController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Type text to translate...',
-              hintStyle: TextStyle(color: Colors.grey.shade400),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(12),
-            ),
-            maxLines: 3,
-            onSubmitted: (text) => _translateText(provider, text),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () => _translateText(provider, _textController.text),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Translate'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _translateText(TranslationProvider provider, String text) {
-    if (text.trim().isNotEmpty) {
-      provider.setOriginalText(text.trim());
-      provider.translateText(text.trim());
-      _textController.clear();
-    }
-  }
-
   Widget _buildWaitingMessage(TranslationProvider provider) {
     String message;
     if (provider.isListening) {
-      message = 'Listening...\nUse the yellow button to separate phrases or the keyboard icon to type.';
+      message = 'Listening...\nSpeak clearly and the translation will appear here.';
     } else if (provider.isTranslating) {
       message = 'Translating...';
     } else {
-      message = 'Preparing microphone...\nUse the keyboard icon to type if needed.';
+      message = 'Preparing microphone...\nGrant permission when prompted.';
     }
     
     return Column(
@@ -207,7 +158,6 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
   Widget _buildTranslatedText(String text) {
     // Get screen orientation and size for better scaling
     final orientation = MediaQuery.of(context).orientation;
-    final screenSize = MediaQuery.of(context).size;
     
     // Larger font sizes, especially for landscape mode
     final minFontSize = orientation == Orientation.landscape ? 36.0 : 28.0;
@@ -286,8 +236,14 @@ class _TranslationDisplayScreenState extends State<TranslationDisplayScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
-    context.read<TranslationProvider>().stopListening();
+    // Restore system UI on exit first
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    
+    // Stop listening and clear session data using cached provider reference
+    _provider?.stopListening();
+    _provider?.clearTexts(); // Clear translation texts for next session
+    _provider?.clearError(); // Clear any errors
+    
     super.dispose();
   }
 }

@@ -32,9 +32,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   
-  # Speech recognition and audio (temporarily disabled for compatibility)
-  # speech_to_text: ^6.6.0
-  # permission_handler: ^11.1.0
+  # Speech recognition and audio
+  speech_to_text: ^7.3.0
+  permission_handler: ^12.0.1
   
   # HTTP requests for translation API
   http: ^1.1.0
@@ -70,11 +70,6 @@ flutter:
 
   assets:
     - assets/secrets/
-
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

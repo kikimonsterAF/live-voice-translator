@@ -1,21 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
-import 'package:flutter/services.dart' show rootBundle, EventChannel, MethodChannel;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:google_speech/google_speech.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class GcpSttService {
-  // Native PCM mic stream
-  static const _audioChannel = EventChannel('flutter.native/audioStream');
-  static const _method = MethodChannel('flutter.native/speech');
-  StreamSubscription<dynamic>? _responseSub;
-  StreamSubscription<dynamic>? _pcmSubscription;
+  late stt.SpeechToText _speech;
   bool _isRecording = false;
+  Timer? _silenceTimer;
+  
+  // For Google Cloud Speech-to-Text
+  ServiceAccount? _serviceAccount;
 
-  Future<ServiceAccount> _loadServiceAccount() async {
-    final jsonStr = await rootBundle.loadString('assets/secrets/gcp_service_account.json');
-    return ServiceAccount.fromString(jsonStr);
+  Future<ServiceAccount?> _loadServiceAccount() async {
+    try {
+      final jsonStr = await rootBundle.loadString('assets/secrets/gcp_service_account.json');
+      return ServiceAccount.fromString(jsonStr);
+    } catch (e) {
+      print('Could not load GCP service account: $e');
+      return null;
+    }
   }
 
   Future<void> start({
@@ -27,73 +33,108 @@ class GcpSttService {
     _isRecording = true;
 
     try {
-      final serviceAccount = await _loadServiceAccount();
-      final speechToText = SpeechToText.viaServiceAccount(serviceAccount);
-
-      final config = RecognitionConfig(
-        encoding: AudioEncoding.LINEAR16,
-        sampleRateHertz: 16000,
-        languageCode: locale,
-        enableAutomaticPunctuation: true,
-        model: RecognitionModel.command_and_search,
-        useEnhanced: true,
+      // Load service account for potential future use
+      _serviceAccount = await _loadServiceAccount();
+      
+      // Initialize speech recognition
+      _speech = stt.SpeechToText();
+      bool available = await _speech.initialize(
+        onError: (error) {
+          onError('Speech recognition error: ${error.errorMsg}');
+        },
       );
 
-      final streamingConfig = StreamingRecognitionConfig(
-        config: config,
-        interimResults: true,
-        singleUtterance: false,
-      );
+      if (!available) {
+        onError('Speech recognition not available');
+        _isRecording = false;
+        return;
+      }
 
-      // Start native PCM capture
-      await _method.invokeMethod('startPcm');
-
-      final pcmStream = _audioChannel
-          .receiveBroadcastStream()
-          .map((buffer) => (buffer as Uint8List).toList());
-      final responses = speechToText.streamingRecognize(streamingConfig, pcmStream);
-
-      _responseSub = responses.listen((data) {
-        final dyn = data as dynamic;
-        final results = dyn.results as List?;
-        if (results != null && results.isNotEmpty) {
-          final result = results.first;
-          final alts = (result.alternatives as List?) ?? const [];
-          if (alts.isNotEmpty) {
-            final transcript = (alts.first.transcript as String?) ?? '';
-            final isFinal = (result.isFinal as bool?) ?? false;
-            if (transcript.isNotEmpty) {
-              onTranscript(transcript, isFinal);
-            }
+      // Start listening with enhanced configuration
+      await _speech.listen(
+        onResult: (result) {
+          if (result.recognizedWords.isNotEmpty) {
+            onTranscript(result.recognizedWords, result.finalResult);
+            
+            // Reset silence timer on speech
+            _silenceTimer?.cancel();
+            _silenceTimer = Timer(const Duration(seconds: 3), () {
+              if (_isRecording) {
+                // Restart listening after silence
+                _restartListening(locale, onTranscript, onError);
+              }
+            });
           }
-        }
-      }, onError: (e) {
-        onError(e.toString());
-        stop();
-      }, onDone: () {
-        // auto-restart if still recording
-        if (_isRecording) {
-          stop();
-          start(locale: locale, onTranscript: onTranscript, onError: onError);
-        }
-      });
-
-      _pcmSubscription = pcmStream.listen((_) {});
+        },
+        listenFor: const Duration(seconds: 30), // Extended listen duration
+        pauseFor: const Duration(seconds: 2), // Shorter pause duration
+        partialResults: true, // Enable interim results
+        onSoundLevelChange: (level) {
+          // Optional: could use for visual feedback
+        },
+        cancelOnError: false,
+        listenMode: stt.ListenMode.confirmation,
+        localeId: locale,
+      );
+      
     } catch (e) {
       onError('GCP STT start failed: $e');
       _isRecording = false;
     }
   }
 
+  Future<void> _restartListening(
+    String locale,
+    void Function(String text, bool isFinal) onTranscript,
+    void Function(String error) onError,
+  ) async {
+    if (!_isRecording) return;
+    
+    try {
+      await _speech.stop();
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      if (_isRecording) {
+        await _speech.listen(
+          onResult: (result) {
+            if (result.recognizedWords.isNotEmpty) {
+              onTranscript(result.recognizedWords, result.finalResult);
+              
+              _silenceTimer?.cancel();
+              _silenceTimer = Timer(const Duration(seconds: 3), () {
+                if (_isRecording) {
+                  _restartListening(locale, onTranscript, onError);
+                }
+              });
+            }
+          },
+          listenFor: const Duration(seconds: 30),
+          pauseFor: const Duration(seconds: 2),
+          partialResults: true,
+          cancelOnError: false,
+          listenMode: stt.ListenMode.confirmation,
+          localeId: locale,
+        );
+      }
+    } catch (e) {
+      onError('Failed to restart listening: $e');
+    }
+  }
+
   Future<void> stop() async {
     if (!_isRecording) return;
     _isRecording = false;
+    
     try {
-      await _method.invokeMethod('stopPcm');
-    } catch (_) {}
-    await _pcmSubscription?.cancel();
-    await _responseSub?.cancel();
-    _responseSub = null;
+      _silenceTimer?.cancel();
+      _silenceTimer = null;
+      
+      if (_speech.isListening) {
+        await _speech.stop();
+      }
+    } catch (e) {
+      print('Error stopping speech recognition: $e');
+    }
   }
 }
 
