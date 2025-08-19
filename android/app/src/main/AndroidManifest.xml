@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     
     <application
-        android:label="Real Time Speech Translator"
+        android:label="Live Speech Translator"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

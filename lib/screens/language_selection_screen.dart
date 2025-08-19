@@ -19,7 +19,7 @@ class LanguageSelectionScreen extends StatelessWidget {
             Widget title({required bool compact}) => Column(
                   children: [
                     Text(
-                      'Live Voice Translator',
+                      'Live Speech Translator',
                       style: TextStyle(
                         fontSize: compact ? 26 : 32,
                         fontWeight: FontWeight.bold,
@@ -29,7 +29,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Real-time voice translation',
+                      'Real-time voice translations for presentations',
                       style: TextStyle(
                         fontSize: compact ? 14 : 16,
                         color: Colors.grey,
