@@ -26,6 +26,18 @@ class Language {
         return 'ur-PK';
       case 'vi':
         return 'vi-VN';
+      case 'ja':
+        return 'ja-JP';
+      case 'ko':
+        return 'ko-KR';
+      case 'th':
+        return 'th-TH';
+      case 'id':
+        return 'id-ID';
+      case 'ms':
+        return 'ms-MY';
+      case 'fil':
+        return 'fil-PH';
       default:
         return 'en-US';
     }
@@ -62,10 +74,17 @@ class SupportedLanguages {
     Language(code: 'pt', name: 'Portuguese', nativeName: 'Português'),
     Language(code: 'ur', name: 'Urdu', nativeName: 'اردو'),
     Language(code: 'vi', name: 'Vietnamese', nativeName: 'Tiếng Việt'),
+    // Additional major Asian languages
+    Language(code: 'ja', name: 'Japanese', nativeName: '日本語'),
+    Language(code: 'ko', name: 'Korean', nativeName: '한국어'),
+    Language(code: 'th', name: 'Thai', nativeName: 'ไทย'),
+    Language(code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia'),
+    Language(code: 'ms', name: 'Malay', nativeName: 'Bahasa Melayu'),
+    Language(code: 'fil', name: 'Filipino', nativeName: 'Filipino'),
   ];
 
-  static Language get defaultInputLanguage => languages[0]; // English
-  static Language get defaultOutputLanguage => languages[10]; // Vietnamese
+  static Language get defaultInputLanguage => languages.firstWhere((l) => l.code == 'en');
+  static Language get defaultOutputLanguage => languages.firstWhere((l) => l.code == 'vi');
 
   static Language? getLanguageByCode(String code) {
     try {

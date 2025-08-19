@@ -15,7 +15,9 @@ class TranslationProvider extends ChangeNotifier {
   bool _isTranslating = false;
   String _errorMessage = '';
   Timer? _debounceTimer;
+  Timer? _healthCheckTimer;
   DateTime _lastTranslationAt = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastActivityAt = DateTime.now();
 
   final SpeechService _speechService = SpeechService();
   final TranslationService _translationService = TranslationService();
@@ -82,41 +84,12 @@ class TranslationProvider extends ChangeNotifier {
       clearError();
       setListening(true);
       
-      // Try Google Cloud STT first; if it starts, it will stream transcripts continuously
-      bool gcpStarted = false;
-      try {
-        await _gcpStt.start(
-          locale: _inputLanguage.localeCode,
-          onTranscript: (text, isFinal) async {
-            setOriginalText(text);
-            // Use same debounce logic for streaming translation
-            _debounceTimer?.cancel();
-            if (text.trim().length < 3) return;
-
-            const debounceMs = 500;
-            const minIntervalMs = 800;
-
-            final now = DateTime.now();
-            final elapsed = now.difference(_lastTranslationAt).inMilliseconds;
-
-            if (elapsed >= minIntervalMs) {
-              _lastTranslationAt = now;
-              unawaited(translateText(text));
-            } else {
-              _debounceTimer = Timer(const Duration(milliseconds: debounceMs), () {
-                _lastTranslationAt = DateTime.now();
-                unawaited(translateText(_originalText));
-              });
-            }
-          },
-          onError: (e) {
-            setError(e);
-          },
-        );
-        gcpStarted = true;
-      } catch (_) {}
-
-      if (gcpStarted) return;
+      // Use standard speech recognition - more reliable than custom GCP implementation
+      // bool gcpStarted = false;
+      // Commenting out GCP STT for now to use standard speech recognition
+      
+      // Start health check timer to restart if no activity
+      _startHealthCheck();
 
       await _speechService.startListening(
         language: _inputLanguage,
@@ -143,8 +116,19 @@ class TranslationProvider extends ChangeNotifier {
           }
         },
         onError: (error) {
-          setError(error);
-          setListening(false);
+          final msg = error.toLowerCase();
+          final isNoInput = msg.contains('no match') ||
+              msg.contains('nomatch') ||
+              msg.contains('no-speech') ||
+              msg.contains('no speech') ||
+              msg.contains('no input') ||
+              msg.contains('not recognized') ||
+              msg.contains('nothing to recognize');
+
+          if (!isNoInput) {
+            setError(error);
+            setListening(false);
+          }
         },
       );
     } catch (e) {
@@ -155,6 +139,7 @@ class TranslationProvider extends ChangeNotifier {
 
   Future<void> stopListening() async {
     try {
+      _healthCheckTimer?.cancel(); // Stop health check when stopping listening
       await _gcpStt.stop();
       await _speechService.stopListening();
       setListening(false);
@@ -190,9 +175,36 @@ class TranslationProvider extends ChangeNotifier {
     _speechService.interruptPhrase();
   }
 
+  void _startHealthCheck() {
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final now = DateTime.now();
+      final timeSinceLastActivity = now.difference(_lastActivityAt).inSeconds;
+      
+      // If no activity for more than 45 seconds, restart listening
+      if (timeSinceLastActivity > 45 && _isListening) {
+        print('No speech activity detected for $timeSinceLastActivity seconds, restarting...');
+        _restartListening();
+      }
+    });
+  }
+
+  Future<void> _restartListening() async {
+    try {
+      await stopListening();
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_isListening) { // Only restart if we should still be listening
+        await startListening();
+      }
+    } catch (e) {
+      setError('Failed to restart speech recognition: $e');
+    }
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _healthCheckTimer?.cancel();
     _speechService.dispose();
     super.dispose();
   }

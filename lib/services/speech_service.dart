@@ -1,25 +1,34 @@
 import 'dart:async';
-import 'package:flutter/services.dart';
 import 'package:live_voice_translator/models/language.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SpeechService {
   bool _isListening = false;
-  static const platform = MethodChannel('flutter.native/speech');
-  String _pendingLocale = 'en-US';
+  late stt.SpeechToText _speech;
+  Timer? _restartTimer;
+  Language? _currentLanguage;
 
   // Callback functions
   Function(String)? _onResult;
   Function(String)? _onError;
 
-  SpeechService() {
-    platform.setMethodCallHandler(_handlePlatformCallback);
-  }
-
   Future<bool> initialize() async {
     try {
-      final granted = await platform.invokeMethod<bool>('requestPermission');
-      return granted == true;
-    } catch (_) {
+      _speech = stt.SpeechToText();
+      return await _speech.initialize(
+        onError: (error) {
+          final msg = (error.errorMsg ?? '').toLowerCase();
+          final isTransient = !(error.permanent == true);
+          if (isTransient && _isNoInputError(msg)) {
+            // Benign: no recognized speech in window → keep going
+            _scheduleRestart();
+            return;
+          }
+          _onError?.call('Speech error: ${error.errorMsg}');
+        },
+      );
+    } catch (e) {
+      _onError?.call('Failed to initialize speech: $e');
       return false;
     }
   }
@@ -31,24 +40,80 @@ class SpeechService {
   }) async {
     _onResult = onResult;
     _onError = onError;
+    _currentLanguage = language;
     _isListening = true;
 
-    _pendingLocale = _toLocale(language.code);
-    // Fire permission request, and attempt to start; native side will prompt if needed
-    unawaited(initialize());
     try {
-      await platform.invokeMethod('startListening', {
-        'language': _pendingLocale,
-      });
+      final initialized = await initialize();
+      if (!initialized) {
+        _onError?.call('Speech recognition not available');
+        return;
+      }
+
+      await _startListeningSession(language);
     } catch (e) {
       _onError?.call('Could not start speech: $e');
     }
   }
 
+  bool _isNoInputError(String msg) {
+    // Normalize and match common variants from Android/iOS engines
+    // e.g., "no match", "error_no_match", "no-speech", "no speech"
+    return msg.contains('no match') ||
+        msg.contains('nomatch') ||
+        msg.contains('no-speech') ||
+        msg.contains('no speech') ||
+        msg.contains('no input') ||
+        msg.contains('not recognized') ||
+        msg.contains('nothing to recognize');
+  }
+
+  Future<void> _startListeningSession(Language language) async {
+    if (!_isListening) return;
+
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          if (result.recognizedWords.isNotEmpty) {
+            _onResult?.call(result.recognizedWords);
+          }
+        },
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: true,
+        onSoundLevelChange: null,
+        cancelOnError: false,
+        listenMode: stt.ListenMode.dictation,
+        localeId: language.localeCode,
+      );
+    } catch (e) {
+      if (_isListening) {
+        print('Listening session ended, restarting...');
+        _scheduleRestart();
+      }
+    }
+  }
+
+  void _scheduleRestart() {
+    _restartTimer?.cancel();
+    _restartTimer = Timer(const Duration(seconds: 1), () {
+      if (_isListening) {
+        _startListeningSession(_getCurrentLanguage());
+      }
+    });
+  }
+
+  Language _getCurrentLanguage() {
+    return _currentLanguage ?? SupportedLanguages.defaultInputLanguage;
+  }
+
   Future<void> stopListening() async {
     _isListening = false;
+    _restartTimer?.cancel();
     try {
-      await platform.invokeMethod('stopListening');
+      if (_speech.isListening) {
+        await _speech.stop();
+      }
     } catch (_) {
       // no-op
     }
@@ -60,73 +125,13 @@ class SpeechService {
     }
   }
 
-  String _toLocale(String code) {
-    switch (code) {
-      case 'en':
-        return 'en-US';
-      case 'zh':
-        return 'zh-CN';
-      case 'hi':
-        return 'hi-IN';
-      case 'es':
-        return 'es-ES';
-      case 'ar':
-        return 'ar-SA';
-      case 'bn':
-        return 'bn-BD';
-      case 'fr':
-        return 'fr-FR';
-      case 'ru':
-        return 'ru-RU';
-      case 'pt':
-        return 'pt-BR';
-      case 'ur':
-        return 'ur-PK';
-      case 'vi':
-        return 'vi-VN';
-      default:
-        return 'en-US';
-    }
-  }
-
-  Future<dynamic> _handlePlatformCallback(MethodCall call) async {
-    switch (call.method) {
-      case 'onPermissionResult':
-        final args = Map<String, dynamic>.from(call.arguments as Map);
-        final granted = args['granted'] == true;
-        if (granted && _isListening) {
-          try {
-            await platform.invokeMethod('startListening', {
-              'language': _pendingLocale,
-            });
-          } catch (e) {
-            _onError?.call('Failed to start speech: $e');
-          }
-        } else if (!granted) {
-          _onError?.call('Microphone permission denied. Enable it in Settings.');
-          _isListening = false;
-        }
-        break;
-      case 'onSpeechResult':
-        final args = Map<String, dynamic>.from(call.arguments as Map);
-        final text = (args['text'] as String?)?.trim() ?? '';
-        if (text.isNotEmpty) {
-          _onResult?.call(text);
-        }
-        break;
-      case 'onSpeechError':
-        final args = Map<String, dynamic>.from(call.arguments as Map);
-        final error = args['error'] as String? ?? 'Unknown error';
-        _onError?.call('Speech error: $error');
-        break;
-    }
-    return null;
-  }
+  // Remove old platform channel code - no longer needed
 
   bool get isListening => _isListening;
   bool get isAvailable => true;
 
   void dispose() {
+    _restartTimer?.cancel();
     stopListening();
   }
 }
