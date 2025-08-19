@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:live_voice_translator/models/language.dart';
 import 'package:live_voice_translator/providers/translation_provider.dart';
 import 'package:live_voice_translator/screens/translation_display_screen.dart';
+import 'package:live_voice_translator/widgets/ad_banner.dart';
 
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
@@ -220,6 +221,14 @@ class LanguageSelectionScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 20),
+                          if (!provider.isPremium) ...[
+                            const SizedBox(height: 8),
+                            const AdBanner(
+                              // Test banner ID; replace with real unit id before release
+                              adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
