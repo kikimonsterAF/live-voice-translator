@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.MICROPHONE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Play Billing permission is provided by the Play Billing Library via the IAP plugin -->
     
     <application
         android:label="Live Speech Translator"
