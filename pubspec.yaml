@@ -46,7 +46,7 @@ dependencies:
   auto_size_text: ^3.0.0
   google_speech: ^5.1.0
   
-  # Play Billing (enables creating in-app products in Play Console)
+  # In-app purchases (Play Billing)
   in_app_purchase: ^3.1.7
 
 dev_dependencies:

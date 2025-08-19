@@ -16,6 +16,7 @@ class TranslationProvider extends ChangeNotifier {
   String _errorMessage = '';
   Timer? _debounceTimer;
   Timer? _healthCheckTimer;
+  bool _isPremium = false;
   DateTime _lastTranslationAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastActivityAt = DateTime.now();
 
@@ -31,6 +32,7 @@ class TranslationProvider extends ChangeNotifier {
   bool get isListening => _isListening;
   bool get isTranslating => _isTranslating;
   String get errorMessage => _errorMessage;
+  bool get isPremium => _isPremium;
 
   // Setters
   void setInputLanguage(Language language) {
@@ -60,6 +62,11 @@ class TranslationProvider extends ChangeNotifier {
 
   void setTranslating(bool translating) {
     _isTranslating = translating;
+    notifyListeners();
+  }
+
+  void setPremium(bool premium) {
+    _isPremium = premium;
     notifyListeners();
   }
 
