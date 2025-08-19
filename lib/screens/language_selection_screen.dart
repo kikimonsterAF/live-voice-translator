@@ -224,8 +224,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                           if (!provider.isPremium) ...[
                             const SizedBox(height: 8),
                             const AdBanner(
-                              // Test banner ID; replace with real unit id before release
-                              adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+                              adUnitId: 'ca-app-pub-9080166502892502/6300978111',
                             ),
                             const SizedBox(height: 12),
                           ],
