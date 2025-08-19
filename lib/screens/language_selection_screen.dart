@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:live_voice_translator/models/language.dart';
 import 'package:live_voice_translator/providers/translation_provider.dart';
+import 'package:live_voice_translator/providers/premium_provider.dart';
 import 'package:live_voice_translator/screens/translation_display_screen.dart';
 import 'package:live_voice_translator/widgets/ad_banner.dart';
 
@@ -157,6 +158,12 @@ class LanguageSelectionScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
+                                  if (!context.watch<PremiumProvider>().isPremium) ...[
+                                    const AdBanner(
+                                      adUnitId: 'ca-app-pub-9080166502892502/6438845792',
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
@@ -221,7 +228,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          if (!provider.isPremium) ...[
+                          if (!context.watch<PremiumProvider>().isPremium) ...[
                             const SizedBox(height: 8),
                             const AdBanner(
                               adUnitId: 'ca-app-pub-9080166502892502/6438845792',

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:live_voice_translator/screens/language_selection_screen.dart';
 import 'package:live_voice_translator/providers/translation_provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:live_voice_translator/providers/premium_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,8 +16,11 @@ class LiveVoiceTranslatorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => TranslationProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => PremiumProvider()..init()),
+        ChangeNotifierProvider(create: (_) => TranslationProvider()),
+      ],
       child: MaterialApp(
         title: 'Live Voice Translator',
         theme: ThemeData(
